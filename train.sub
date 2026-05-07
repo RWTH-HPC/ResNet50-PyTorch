@@ -1,0 +1,35 @@
+#!/bin/zsh
+
+#SBATCH -J imagenet_train
+#SBATCH --nodes=2
+#SBATCH --gpus-per-node=4
+#SBATCH --cpus-per-task=96
+#SBATCH -t 2:00:00
+#SBATCH --exclusive
+#SBATCH --beeond
+
+IMAGENET_PATH=<your-path>
+CONTAINER_PATH=<your-container>
+SCRIPT_PATH=<path-to-scripts>
+export SCRIPT_PATH
+
+# Use regular dataset
+srun --wait=0 cp ${IMAGENET_PATH} $TEMP/ILSVRC2012.tar
+
+# Copy and untar archive to node
+# Beeond is requested to ensure total wiping of disk, but is not used and data is stored locally on each node
+srun --wait=0 bash -c 'echo "Copy complete" && ls -l $TEMP'
+srun --wait=0 bash -c 'cd $TEMP && tar -xf $TEMP/ILSVRC2012.tar'
+
+### change 5-digit MASTER_PORT as you wish, slurm will raise Error if duplicated with others
+### change WORLD_SIZE as gpus/node * num_nodes
+export MASTER_PORT=12340
+export WORLD_SIZE=${SLURM_NTASKS}
+
+### get the first node name as master address
+echo "NODELIST="${SLURM_NODELIST}
+master_addr=$(scontrol show hostnames "$SLURM_JOB_NODELIST" | head -n 1)
+export MASTER_ADDR=$master_addr
+echo "MASTER_ADDR="$MASTER_ADDR
+
+srun apptainer exec --nv --bind ${SCRIPT_PATH} --bind $TEMP:/imagenet ${CONTAINER_PATH} bash -c 'cd /DeepLearningExamples/PyTorch/Classification/ConvNets && ${SCRIPT_PATH}/train.sh'

@@ -1,0 +1,13 @@
+Bootstrap: docker
+From: nvcr.io/nvidia/pytorch:25.01-py3
+Stage: build
+
+%post
+
+git clone https://github.com/NVIDIA/DeepLearningExamples.git
+
+git clone https://github.com/domnakus/torchlars.git
+pip install git+https://github.com/NVIDIA/dllogger@v1.0.0#egg=dllogger pytest
+cd /torchlars
+ls -l
+pip install -e .
